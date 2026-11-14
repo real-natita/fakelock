@@ -313,9 +313,30 @@ class CatLock:
 
         self.root.after(300, self.force_focus)
         self.root.after(1500, self.force_focus)
+        if IS_WIN:
+            self.root.after(700, self.ensure_fullscreen)
+            self.root.after(2500, self.ensure_fullscreen)
         self.has_full = self.sfx.has("full")
         self.music_vol = 0.80 if self.has_full else 0.45
         self.root.after(1200, self.begin_show)
+
+    def ensure_fullscreen(self):
+        """Если -fullscreen не сработал (Wine, странный DPI) — растягиваем вручную."""
+        if self.done:
+            return
+        try:
+            sw = self.root.winfo_screenwidth()
+            sh = self.root.winfo_screenheight()
+            w = self.root.winfo_width()
+            h = self.root.winfo_height()
+            if w < sw - 8 or h < sh - 8:
+                self.root.overrideredirect(True)
+                self.root.geometry(f"{sw}x{sh}+0+0")
+                self.root.attributes("-topmost", True)
+                self.root.lift()
+                self.root.focus_force()
+        except Exception:
+            pass
 
     def force_focus(self):
         """Чтобы окно точно поймало клавиатуру (особенно в Hyprland)."""
