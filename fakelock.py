@@ -594,7 +594,11 @@ def main():
         app.sfx.stop_music()
         os._exit(0)
 
-    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+    # SIGHUP есть только на linux, поэтому берём по имени
+    for name in ("SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"):
+        sig = getattr(signal, name, None)
+        if sig is None:
+            continue
         try:
             signal.signal(sig, bye)
         except Exception:
