@@ -1,0 +1,32 @@
+name: build-exe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: python -m pip install --upgrade pyinstaller pillow
+
+      - name: Build fakelock.exe
+        run: >
+          python -m PyInstaller --noconfirm --clean --onefile --noconsole
+          --name fakelock --exclude-module numpy
+          --add-data "assets;assets" fakelock.py
+
+      - name: Upload exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: fakelock-exe
+          path: dist/fakelock.exe
+          if-no-files-found: error
