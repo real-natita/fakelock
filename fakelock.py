@@ -287,9 +287,12 @@ class CatLock:
             root.attributes("-topmost", True)
         else:
             gw, gh = monitor_size()
-            root.overrideredirect(True)
             root.geometry(f"{gw}x{gh}+0+0")
             root.attributes("-topmost", True)
+            # настоящий фуллскрин Hyprland (иначе waybar остаётся сверху)
+            root.after(500, self.hypr_fullscreen)
+            root.after(1200, self.hypr_fullscreen)
+            root.after(2600, lambda: self.hypr_fullscreen(fallback=True))
 
         self.W, self.H = gw, gh
         self.S = gh / 576.0
@@ -319,6 +322,42 @@ class CatLock:
         self.has_full = self.sfx.has("full")
         self.music_vol = 0.80 if self.has_full else 0.45
         self.root.after(1200, self.begin_show)
+
+    def hypr_fullscreen(self, fallback=False):
+        """Hyprland 0.57: настоящий fullscreen через Lua-диспетчер."""
+        if IS_WIN or self.done:
+            return
+        is_fs = False
+        try:
+            out = subprocess.run(["hyprctl", "clients", "-j"],
+                                 capture_output=True, text=True, timeout=3).stdout
+            me = None
+            for c in json.loads(out):
+                if c.get("pid") == os.getpid():
+                    me = c
+                    break
+            if me is not None:
+                is_fs = me.get("fullscreen") == 2
+                if not is_fs:
+                    try:
+                        self.root.focus_force()
+                    except Exception:
+                        pass
+                    subprocess.run(
+                        ["hyprctl", "eval",
+                         'hl.dispatch(hl.dsp.window.fullscreen({mode="fullscreen"}))'],
+                        capture_output=True, timeout=3)
+        except Exception:
+            pass
+        if not is_fs and fallback:
+            # не Hyprland или диспетчер не сработал — растягиваем руками
+            try:
+                self.root.overrideredirect(True)
+                self.root.geometry(f"{self.W}x{self.H}+0+0")
+                self.root.attributes("-topmost", True)
+                self.root.lift()
+            except Exception:
+                pass
 
     def ensure_fullscreen(self):
         """Если -fullscreen не сработал (Wine, странный DPI) — растягиваем вручную."""
